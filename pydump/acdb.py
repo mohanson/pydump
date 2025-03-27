@@ -112,6 +112,15 @@ class Emerge:
         self.driver = driver
         self.lock = threading.Lock()
 
+    def __delitem__(self, k: str) -> None:
+        self.rmi(k)
+
+    def __getitem__(self, k: str) -> typing.Any:
+        return self.get(k)
+
+    def __setitem__(self, k: str, v: typing.Any) -> None:
+        self.set(k, v)
+
     def get(self, k: str) -> typing.Any:
         with self.lock:
             v = self.driver.get(k)
