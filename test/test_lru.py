@@ -3,46 +3,46 @@ import pydump.lru
 
 def test_lru_append():
     c = pydump.lru.Lru(4)
-    c.set(1, 1)
-    c.set(2, 2)
-    c.set(3, 3)
-    c.set(4, 4)
-    c.set(5, 5)
-    assert not c.has(1)
+    c[1] = 1
+    c[2] = 2
+    c[3] = 3
+    c[4] = 4
+    c[5] = 5
+    assert not 1 in c
     assert c.get(5) == 5
 
 
 def test_lru_change():
     c = pydump.lru.Lru(4)
-    c.set(1, 1)
-    c.set(2, 2)
-    c.set(3, 3)
-    c.set(4, 4)
-    c.set(1, 5)
+    c[1] = 1
+    c[2] = 2
+    c[3] = 3
+    c[4] = 4
+    c[1] = 5
     assert c.get(1) == 5
 
 
 def test_lru_delete():
     c = pydump.lru.Lru(4)
-    c.set(1, 1)
-    c.set(2, 2)
-    c.set(3, 3)
-    c.set(4, 4)
-    c.rmi(2)
-    assert not c.has(2)
-    assert c.len() == 3
+    c[1] = 1
+    c[2] = 2
+    c[3] = 3
+    c[4] = 4
+    c.pop(2)
+    assert not 2 in c
+    assert len(c) == 3
 
 
 def test_lru_size():
     c = pydump.lru.Lru(4)
-    assert c.len() == 0
-    c.set(1, 1)
-    assert c.len() == 1
-    c.set(2, 2)
-    assert c.len() == 2
-    c.set(3, 3)
-    assert c.len() == 3
-    c.set(4, 4)
-    assert c.len() == 4
-    c.set(5, 5)
-    assert c.len() == 4
+    assert len(c) == 0
+    c[1] = 1
+    assert len(c) == 1
+    c[2] = 2
+    assert len(c) == 2
+    c[3] = 3
+    assert len(c) == 3
+    c[4] = 4
+    assert len(c) == 4
+    c[5] = 5
+    assert len(c) == 4

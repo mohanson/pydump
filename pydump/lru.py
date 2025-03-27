@@ -12,30 +12,37 @@ class Lru:
         self.lock = threading.Lock()
         self.size = size
 
-    def get(self, k: typing.Any) -> typing.Any:
-        # Get looks up a key's value from the cache.
+    def __contains__(self, key: str) -> bool:
         with self.lock:
-            self.data.move_to_end(k)
-            return self.data[k]
+            return key in self.data
 
-    def has(self, k: typing.Any) -> bool:
-        # Has returns true if a key exists.
+    def __delitem__(self, key: str) -> None:
+        del self.data[key]
+
+    def __getitem__(self, key: str) -> typing.Any:
         with self.lock:
-            return k in self.data
+            return self.data[key]
 
-    def len(self) -> int:
-        # Len returns the number of items in the cache.
+    def __len__(self) -> int:
         with self.lock:
             return len(self.data)
 
-    def rmi(self, k: typing.Any) -> None:
-        # Rmi removes the provided key from the cache.
-        with self.lock:
-            self.data.pop(k)
-
-    def set(self, k: typing.Any, v: typing.Any) -> None:
-        # Set adds a value to the cache.
+    def __setitem__(self, key: str, value: typing.Any) -> None:
         with self.lock:
             if len(self.data) >= self.size:
                 self.data.popitem(False)
-            self.data[k] = v
+            self.data[key] = value
+
+    def get(self, key: typing.Any, default=None) -> typing.Any:
+        # Return the value for key if key is in the dictionary, else default.
+        with self.lock:
+            if key not in self.data:
+                return default
+            self.data.move_to_end(key)
+            return self.data[key]
+
+    def pop(self, key: typing.Any, default=None) -> typing.Any:
+        # Remove specified key and return the corresponding value. If the key is not found, return the default if given;
+        # otherwise, raise a KeyError.
+        with self.lock:
+            return self.data.pop(key, default)

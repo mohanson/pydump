@@ -13,17 +13,23 @@ class MemDriver:
     def __init__(self) -> None:
         self.data = {}
 
-    def get(self, k: str) -> bytearray:
-        return self.data[k]
+    def __contains__(self, key: str) -> bool:
+        return key in self.data
 
-    def has(self, k: str) -> bool:
-        return k in self.data
+    def __delitem__(self, key: str) -> None:
+        del self.data[key]
 
-    def rmi(self, k: str) -> None:
-        self.data.pop(k)
+    def __getitem__(self, key: str) -> bytearray:
+        return self.data[key]
 
-    def set(self, k: str, v: bytearray) -> None:
-        self.data[k] = v
+    def __setitem__(self, key: str, value: bytearray) -> None:
+        self.data[key] = value
+
+    def get(self, key: str, default=None) -> bytearray:
+        return self.data.get(key, default)
+
+    def pop(self, key: str, default=None) -> bytearray:
+        return self.data.pop(key, default)
 
 
 class DocDriver:
@@ -35,19 +41,31 @@ class DocDriver:
         if not os.path.exists(self.root):
             os.makedirs(self.root)
 
-    def get(self, k: str) -> bytearray:
-        with open(os.path.join(self.root, k), 'rb') as f:
-            return f.read()
+    def __contains__(self, key: str) -> bool:
+        return os.path.exists(os.path.join(self.root, key))
 
-    def has(self, k: str) -> bool:
-        return os.path.exists(os.path.join(self.root, k))
+    def __delitem__(self, key: str) -> None:
+        os.remove(os.path.join(self.root, key))
 
-    def rmi(self, k: str) -> None:
-        os.remove(os.path.join(self.root, k))
+    def __getitem__(self, key: str) -> bytearray:
+        with open(os.path.join(self.root, key), 'rb') as f:
+            return bytearray(f.read())
 
-    def set(self, k: str, v: bytearray) -> None:
-        with open(os.path.join(self.root, k), 'wb') as f:
-            f.write(v)
+    def __setitem__(self, key: str, value: bytearray) -> None:
+        with open(os.path.join(self.root, key), 'wb') as f:
+            f.write(value)
+
+    def get(self, key: str, default=None) -> bytearray:
+        with contextlib.suppress(Exception):
+            return self[key]
+        return default
+
+    def pop(self, key: str, default=None) -> bytearray:
+        with contextlib.suppress(Exception):
+            value = self[key]
+            del self[key]
+            return value
+        return default
 
 
 class LruDriver:
@@ -62,20 +80,28 @@ class LruDriver:
         self.data = collections.OrderedDict()
         self.size = size
 
-    def get(self, k: str) -> bytearray:
-        self.data.move_to_end(k)
-        return self.data[k]
+    def __contains__(self, key: str) -> bool:
+        return key in self.data
 
-    def has(self, k: str) -> bool:
-        return k in self.data
+    def __delitem__(self, key: str) -> None:
+        del self.data[key]
 
-    def rmi(self, k: str) -> None:
-        self.data.pop(k)
+    def __getitem__(self, key: str) -> bytearray:
+        self.data.move_to_end(key)
+        return self.data[key]
 
-    def set(self, k: str, v: bytearray) -> None:
+    def __setitem__(self, key: str, value: bytearray) -> None:
         if len(self.data) >= self.size:
             self.data.popitem(False)
-        self.data[k] = v
+        self.data[key] = value
+
+    def get(self, key: str, default=None) -> bytearray:
+        with contextlib.suppress(Exception):
+            return self[key]
+        return default
+
+    def pop(self, key: str, default=None) -> bytearray:
+        return self.data.pop(key, default)
 
 
 class MapDriver:
@@ -86,23 +112,36 @@ class MapDriver:
         self.doc_driver = DocDriver(root)
         self.lru_driver = LruDriver(1024)
 
-    def get(self, k: str) -> bytearray:
+    def __contains__(self, key: str) -> bool:
+        return key in self.lru_driver or key in self.doc_driver
+
+    def __delitem__(self, key: str) -> None:
+        with contextlib.suppress(Exception):
+            del self.lru_driver[key]
+        del self.doc_driver[key]
+
+    def __getitem__(self, key: str) -> bytearray:
         with contextlib.suppress(KeyError):
-            return self.lru_driver.get(k)
-        v = self.doc_driver.get(k)
-        self.lru_driver.set(k, v)
-        return v
+            return self.lru_driver[key]
+        value = self.doc_driver[key]
+        self.lru_driver[key] = value
+        return value
 
-    def has(self, k: str) -> bool:
-        return self.lru_driver.has(k) or self.doc_driver.has(k)
+    def __setitem__(self, key: str, value: bytearray) -> None:
+        self.lru_driver[key] = value
+        self.doc_driver[key] = value
 
-    def rmi(self, k: str) -> None:
-        self.doc_driver.rmi(k)
-        self.lru_driver.rmi(k)
+    def get(self, key: str, default=None) -> bytearray:
+        with contextlib.suppress(KeyError):
+            return self[key]
+        return default
 
-    def set(self, k: str, v: bytearray) -> None:
-        self.doc_driver.set(k, v)
-        self.lru_driver.set(k, v)
+    def pop(self, key: str, default=None) -> bytearray:
+        with contextlib.suppress(Exception):
+            value = self[key]
+            del self[key]
+            return value
+        return default
 
 
 class Emerge:
@@ -112,29 +151,32 @@ class Emerge:
         self.driver = driver
         self.lock = threading.Lock()
 
-    def __delitem__(self, k: str) -> None:
-        self.rmi(k)
-
-    def __getitem__(self, k: str) -> typing.Any:
-        return self.get(k)
-
-    def __setitem__(self, k: str, v: typing.Any) -> None:
-        self.set(k, v)
-
-    def get(self, k: str) -> typing.Any:
+    def __contains__(self, key: str) -> bool:
         with self.lock:
-            v = self.driver.get(k)
-            return json.loads(v)
+            return key in self.driver
 
-    def has(self, k: str) -> bool:
+    def __delitem__(self, key: str) -> None:
         with self.lock:
-            self.driver.has(k)
+            del self.driver[key]
 
-    def rmi(self, k: str) -> None:
+    def __getitem__(self, key: str) -> typing.Any:
         with self.lock:
-            self.driver.rmi(k)
+            return json.loads(self.driver[key])
 
-    def set(self, k: str, v: typing.Any) -> None:
+    def __setitem__(self, key: str, value: typing.Any) -> None:
         with self.lock:
-            v = json.dumps(v).encode()
-            self.driver.set(k, v)
+            self.driver[key] = json.dumps(value).encode()
+
+    def get(self, key: str, default=None) -> typing.Any:
+        with self.lock:
+            with contextlib.suppress(Exception):
+                return self[key]
+            return default
+
+    def pop(self, key: str, default=None) -> None:
+        with self.lock:
+            with contextlib.suppress(Exception):
+                value = self[key]
+                del self[key]
+                return value
+            return default
