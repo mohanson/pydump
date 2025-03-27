@@ -12,12 +12,10 @@ class Lru:
         self.lock = threading.Lock()
         self.size = size
 
-    def get(self, k: typing.Any) -> typing.Optional[typing.Any]:
+    def get(self, k: typing.Any) -> typing.Any:
         # Get looks up a key's value from the cache.
         with self.lock:
-            if k not in self.data:
-                return None
-            self.data.move_to_end(k, False)
+            self.data.move_to_end(k)
             return self.data[k]
 
     def has(self, k: typing.Any) -> bool:
@@ -33,14 +31,11 @@ class Lru:
     def rmi(self, k: typing.Any) -> None:
         # Rmi removes the provided key from the cache.
         with self.lock:
-            if k not in self.data:
-                return None
             self.data.pop(k)
 
     def set(self, k: typing.Any, v: typing.Any) -> None:
         # Set adds a value to the cache.
         with self.lock:
             if len(self.data) >= self.size:
-                self.data.popitem()
+                self.data.popitem(False)
             self.data[k] = v
-            self.data.move_to_end(k, False)

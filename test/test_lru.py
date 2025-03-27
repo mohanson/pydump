@@ -8,7 +8,7 @@ def test_lru_append():
     c.set(3, 3)
     c.set(4, 4)
     c.set(5, 5)
-    assert c.get(1) == None
+    assert not c.has(1)
     assert c.get(5) == 5
 
 
@@ -29,7 +29,7 @@ def test_lru_delete():
     c.set(3, 3)
     c.set(4, 4)
     c.rmi(2)
-    assert c.get(2) == None
+    assert not c.has(2)
     assert c.len() == 3
 
 
