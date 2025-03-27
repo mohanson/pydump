@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pydump"
+version = "0.1.0"
+authors = [
+  { name="Mohanson", email="mohanson@outlook.com" },
+]
+description = "pydump: a personal utility library written in python"
+readme = "README.md"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+homepage = "https://github.com/mohanson/pydump"
