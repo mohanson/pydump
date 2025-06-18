@@ -17,7 +17,8 @@ class Lru:
             return key in self.data
 
     def __delitem__(self, key: str) -> None:
-        del self.data[key]
+        with self.lock:
+            del self.data[key]
 
     def __getitem__(self, key: str) -> typing.Any:
         with self.lock:
